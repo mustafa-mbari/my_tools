@@ -28,6 +28,7 @@ export default function XMLDuplicateAnalyzer() {
   const [results, setResults] = useState<AnalysisResponse | null>(null);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [dragOver, setDragOver] = useState<boolean>(false);
+  const [isProgressFile, setIsProgressFile] = useState<boolean>(false);
 
   // Handle drag and drop
   const handleDragOver = (e: React.DragEvent) => {
@@ -56,13 +57,56 @@ export default function XMLDuplicateAnalyzer() {
   };
 
   // Handle file selection
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0] || null;
     if (selectedFile) {
       if (selectedFile.type === 'text/xml' || selectedFile.name.toLowerCase().endsWith('.xml')) {
-        setFile(selectedFile);
-        setResults(null);
-        setCheckedIds(new Set());
+        // Check if it's a progress file by looking for <ProgressData> root
+        const text = await selectedFile.text();
+        if (text.includes('<ProgressData>')) {
+          // Parse progress file
+          try {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, 'text/xml');
+            const completedNodes = xmlDoc.getElementsByTagName('CompletedItems')[0]?.getElementsByTagName('Item') || [];
+            const pendingNodes = xmlDoc.getElementsByTagName('PendingItems')[0]?.getElementsByTagName('Item') || [];
+            const completed: DuplicateResult[] = [];
+            const pending: DuplicateResult[] = [];
+            for (let i = 0; i < completedNodes.length; i++) {
+              const node = completedNodes[i];
+              completed.push({
+                objectId: node.getAttribute('objectId') || '',
+                count: Number(node.getAttribute('count') || '1'),
+                className: node.getAttribute('className') || ''
+              });
+            }
+            for (let i = 0; i < pendingNodes.length; i++) {
+              const node = pendingNodes[i];
+              pending.push({
+                objectId: node.getAttribute('objectId') || '',
+                count: Number(node.getAttribute('count') || '1'),
+                className: node.getAttribute('className') || ''
+              });
+            }
+            // Merge for display
+            const all = [...pending, ...completed];
+            setResults({
+              success: true,
+              fileName: selectedFile.name,
+              duplicates: all
+            });
+            setCheckedIds(new Set(completed.map(item => item.objectId)));
+            setFile(selectedFile);
+            setIsProgressFile(true);
+          } catch (err) {
+            alert('Failed to parse progress file.');
+          }
+        } else {
+          setFile(selectedFile);
+          setResults(null);
+          setCheckedIds(new Set());
+          setIsProgressFile(false);
+        }
       } else {
         alert('Please select XML files only');
         event.target.value = '';
@@ -78,13 +122,14 @@ export default function XMLDuplicateAnalyzer() {
       alert('Please select a file first');
       return;
     }
-
+    if (isProgressFile) {
+      // Already loaded progress file
+      return;
+    }
     setLoading(true);
-    
     try {
       const xmlContent = await file.text();
       const duplicates = analyzeXMLContent(xmlContent);
-      
       setResults({
         success: true,
         fileName: file.name,
@@ -102,6 +147,36 @@ export default function XMLDuplicateAnalyzer() {
     } finally {
       setLoading(false);
     }
+  };
+  // Save progress as XML file
+  const handleSaveProgress = () => {
+    if (!results || results.duplicates.length === 0) return;
+    const completedItems = results.duplicates.filter(item => checkedIds.has(item.objectId));
+    const pendingItems = results.duplicates.filter(item => !checkedIds.has(item.objectId));
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<ProgressData>\n';
+    xml += '  <CompletedItems>\n';
+    completedItems.forEach(item => {
+      xml += `    <Item objectId="${item.objectId}" count="${item.count}" className="${item.className || ''}" />\n`;
+    });
+    xml += '  </CompletedItems>\n';
+    xml += '  <PendingItems>\n';
+    pendingItems.forEach(item => {
+      xml += `    <Item objectId="${item.objectId}" count="${item.count}" className="${item.className || ''}" />\n`;
+    });
+    xml += '  </PendingItems>\n';
+    xml += '</ProgressData>';
+    // Download
+    const blob = new Blob([xml], { type: 'text/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${results.fileName.replace(/\.xml$/i, '')}-progress.xml`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
   };
 
   // Handle checkbox change
@@ -145,7 +220,7 @@ export default function XMLDuplicateAnalyzer() {
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto space-y-8">
+  <div className="max-w-4xl mx-auto space-y-8">
           {/* Upload Section */}
           <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-6">
@@ -204,9 +279,9 @@ export default function XMLDuplicateAnalyzer() {
               
               <button
                 onClick={handleUpload}
-                disabled={!file || loading}
+                disabled={!file || loading || isProgressFile}
                 className={`mt-6 w-full py-4 px-6 rounded-xl font-semibold text-white transition-all duration-300 transform ${
-                  !file || loading
+                  !file || loading || isProgressFile
                     ? 'bg-gray-300 cursor-not-allowed'
                     : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 hover:scale-105 shadow-lg hover:shadow-xl'
                 }`}
@@ -219,10 +294,19 @@ export default function XMLDuplicateAnalyzer() {
                 ) : (
                   <div className="flex items-center justify-center gap-2">
                     <Zap className="w-5 h-5" />
-                   Analyze File
+                   {isProgressFile ? 'Progress File Loaded' : 'Analyze File'}
                   </div>
                 )}
               </button>
+              {/* Save Progress Button */}
+              {results && results.success && results.duplicates.length > 0 && (
+                <button
+                  onClick={handleSaveProgress}
+                  className="mt-4 w-full py-3 px-6 rounded-xl font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 hover:scale-105 shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  Save Progress as XML
+                </button>
+              )}
             </CardContent>
           </Card>
 
@@ -268,9 +352,12 @@ export default function XMLDuplicateAnalyzer() {
                       <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
                         <div className="flex items-center gap-2 text-green-700">
                           <CheckCircle className="w-5 h-5" />
-                          <span className="font-medium">File analyzed successfully: </span>
+                          <span className="font-medium">{isProgressFile ? 'Progress file loaded:' : 'File analyzed successfully:'} </span>
                           <span className="font-bold">{results.fileName}</span>
                         </div>
+                        {isProgressFile && (
+                          <div className="text-xs text-gray-500 mt-2">You can continue your previous work. Saving will overwrite this progress file.</div>
+                        )}
                       </div>
 
                       {results.duplicates.length > 0 ? (
