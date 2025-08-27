@@ -1,3 +1,45 @@
+// Progress Save/Resume Utilities -----------------------------------------------------------------------------
+export function serializeProgressToXML(completed: DuplicateResult[], pending: DuplicateResult[]): string {
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<ProgressData>\n';
+  xml += '  <CompletedItems>\n';
+  completed.forEach(item => {
+    xml += `    <Item objectId="${item.objectId}" count="${item.count}" className="${item.className}" />\n`;
+  });
+  xml += '  </CompletedItems>\n';
+  xml += '  <PendingItems>\n';
+  pending.forEach(item => {
+    xml += `    <Item objectId="${item.objectId}" count="${item.count}" className="${item.className}" />\n`;
+  });
+  xml += '  </PendingItems>\n';
+  xml += '</ProgressData>';
+  return xml;
+}
+
+export function parseProgressXML(xmlContent: string): { completed: DuplicateResult[]; pending: DuplicateResult[] } {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+  const completedNodes = xmlDoc.getElementsByTagName('CompletedItems')[0]?.getElementsByTagName('Item') || [];
+  const pendingNodes = xmlDoc.getElementsByTagName('PendingItems')[0]?.getElementsByTagName('Item') || [];
+  const completed: DuplicateResult[] = [];
+  const pending: DuplicateResult[] = [];
+  for (let i = 0; i < completedNodes.length; i++) {
+    const node = completedNodes[i];
+    completed.push({
+      objectId: node.getAttribute('objectId') || '',
+      count: Number(node.getAttribute('count') || '1'),
+      className: node.getAttribute('className') || ''
+    });
+  }
+  for (let i = 0; i < pendingNodes.length; i++) {
+    const node = pendingNodes[i];
+    pending.push({
+      objectId: node.getAttribute('objectId') || '',
+      count: Number(node.getAttribute('count') || '1'),
+      className: node.getAttribute('className') || ''
+    });
+  }
+  return { completed, pending };
+}
 // Types
 export interface DuplicateResult {
   objectId: string;

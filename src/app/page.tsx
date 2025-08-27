@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/checkbox';
 // If Checkbox is not available, create it or adjust the path accordingly.
 import { Upload, FileText, CheckCircle, AlertCircle, Zap, BarChart3, Target, Trophy } from '../components/icons';
 import { analyzeXMLContent, copyToClipboard } from '../src/lib/xml-analyzer';
+import { serializeProgressToXML, parseProgressXML } from '../src/lib/xml-analyzer';
 
 // Types
 interface DuplicateResult {
@@ -61,34 +62,10 @@ export default function XMLDuplicateAnalyzer() {
     const selectedFile = event.target.files?.[0] || null;
     if (selectedFile) {
       if (selectedFile.type === 'text/xml' || selectedFile.name.toLowerCase().endsWith('.xml')) {
-        // Check if it's a progress file by looking for <ProgressData> root
         const text = await selectedFile.text();
         if (text.includes('<ProgressData>')) {
-          // Parse progress file
           try {
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(text, 'text/xml');
-            const completedNodes = xmlDoc.getElementsByTagName('CompletedItems')[0]?.getElementsByTagName('Item') || [];
-            const pendingNodes = xmlDoc.getElementsByTagName('PendingItems')[0]?.getElementsByTagName('Item') || [];
-            const completed: DuplicateResult[] = [];
-            const pending: DuplicateResult[] = [];
-            for (let i = 0; i < completedNodes.length; i++) {
-              const node = completedNodes[i];
-              completed.push({
-                objectId: node.getAttribute('objectId') || '',
-                count: Number(node.getAttribute('count') || '1'),
-                className: node.getAttribute('className') || ''
-              });
-            }
-            for (let i = 0; i < pendingNodes.length; i++) {
-              const node = pendingNodes[i];
-              pending.push({
-                objectId: node.getAttribute('objectId') || '',
-                count: Number(node.getAttribute('count') || '1'),
-                className: node.getAttribute('className') || ''
-              });
-            }
-            // Merge for display
+            const { completed, pending } = parseProgressXML(text);
             const all = [...pending, ...completed];
             setResults({
               success: true,
@@ -151,21 +128,13 @@ export default function XMLDuplicateAnalyzer() {
   // Save progress as XML file
   const handleSaveProgress = () => {
     if (!results || results.duplicates.length === 0) return;
-    const completedItems = results.duplicates.filter(item => checkedIds.has(item.objectId));
-    const pendingItems = results.duplicates.filter(item => !checkedIds.has(item.objectId));
-    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<ProgressData>\n';
-    xml += '  <CompletedItems>\n';
-    completedItems.forEach(item => {
-      xml += `    <Item objectId="${item.objectId}" count="${item.count}" className="${item.className || ''}" />\n`;
-    });
-    xml += '  </CompletedItems>\n';
-    xml += '  <PendingItems>\n';
-    pendingItems.forEach(item => {
-      xml += `    <Item objectId="${item.objectId}" count="${item.count}" className="${item.className || ''}" />\n`;
-    });
-    xml += '  </PendingItems>\n';
-    xml += '</ProgressData>';
-    // Download
+    const completedItems = results.duplicates
+      .filter(item => checkedIds.has(item.objectId))
+      .map(item => ({ ...item, className: item.className || '' }));
+    const pendingItems = results.duplicates
+      .filter(item => !checkedIds.has(item.objectId))
+      .map(item => ({ ...item, className: item.className || '' }));
+    const xml = serializeProgressToXML(completedItems, pendingItems);
     const blob = new Blob([xml], { type: 'text/xml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
