@@ -78,3 +78,13 @@ export interface DuplicateResult {
       throw error;
     }
   };
+
+  // Utility to copy text to clipboard
+export const copyToClipboard = async (text: string): Promise<void> => {
+  try {
+    await navigator.clipboard.writeText(text);
+    console.log(`Copied to clipboard: ${text}`);
+  } catch (err) {
+    console.error('Failed to copy text: ', err);
+  }
+};

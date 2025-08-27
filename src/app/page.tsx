@@ -219,7 +219,7 @@ export default function XMLDuplicateAnalyzer() {
                 ) : (
                   <div className="flex items-center justify-center gap-2">
                     <Zap className="w-5 h-5" />
-                    تحليل الملف / Analyze File
+                   Analyze File
                   </div>
                 )}
               </button>
@@ -294,8 +294,8 @@ export default function XMLDuplicateAnalyzer() {
                               ) : (
                                 pendingItems.map((item, index) => (
                                   <Card key={item.objectId} className="border border-gray-200 hover:border-blue-300 transition-all duration-300 hover:shadow-lg">
-                                    <CardContent className="flex items-center p-4">
-                                      <div className="flex items-center gap-3 mr-4">
+                                    <CardContent className="flex items-center gap-2 px-4 py-0 h-12">
+                                      <div className="flex items-center gap-3 mr-4 h-6">
                                         <span className="flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-sm font-bold rounded-full">
                                           {index + 1}
                                         </span>
@@ -307,14 +307,8 @@ export default function XMLDuplicateAnalyzer() {
                                       </div>
                                       <div className="flex-1 flex items-center gap-3">
                                         <span className="font-mono text-gray-900 font-medium">{item.objectId}</span>
-                                        <div className="flex items-center gap-2">
-                                          <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">
-                                            {item.count} مرات / times
-                                          </span>
-                                          <span className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
-                                            {item.className || 'N/A'}
-                                          </span>
-                                        </div>
+                                        <span className="bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">{item.count} مرات / times</span>
+                                        <span className="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">{item.className}</span>
                                       </div>
                                     </CardContent>
                                   </Card>
