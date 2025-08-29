@@ -30,6 +30,7 @@ export default function XMLDuplicateAnalyzer() {
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
   const [dragOver, setDragOver] = useState<boolean>(false);
   const [isProgressFile, setIsProgressFile] = useState<boolean>(false);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Handle drag and drop
   const handleDragOver = (e: React.DragEvent) => {
@@ -42,6 +43,14 @@ export default function XMLDuplicateAnalyzer() {
     setDragOver(false);
   };
 
+    // Handle copy button feedback
+    const handleCopy = (objectId: string) => {
+      copyToClipboard(objectId);
+      setCopiedId(objectId);
+      setTimeout(() => {
+        setCopiedId(null);
+      }, 1200);
+    };
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
@@ -364,8 +373,11 @@ export default function XMLDuplicateAnalyzer() {
                                             <div className="flex-1 flex items-center gap-3">
                                               <span className="font-mono text-gray-900 font-medium">{item.objectId}</span>
                                               <button
-                                                onClick={() => copyToClipboard(item.objectId)}
-                                                className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition">Copy Object-Id</button>
+                                                onClick={() => handleCopy(item.objectId)}
+                                                className={`px-2 py-1 text-xs rounded transition ${copiedId === item.objectId ? 'bg-green-200 text-green-700' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                                              >
+                                                {copiedId === item.objectId ? 'Copied!' : 'Copy Object-Id'}
+                                              </button>
                                               <span className="bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">{item.count} times</span>
                                               <span className="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-0.5 rounded-full">{item.className}</span>
                                             </div>
@@ -404,8 +416,11 @@ export default function XMLDuplicateAnalyzer() {
                                             <div className="flex-1 flex items-center gap-3 opacity-75">
                                               <span className="font-mono font-medium line-through text-gray-500">{item.objectId}</span>
                                               <button
-                                                  onClick={() => copyToClipboard(item.objectId)}
-                                                  className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition">Copy Object-Id</button>
+                                                onClick={() => handleCopy(item.objectId)}
+                                                className={`px-2 py-1 text-xs rounded transition ${copiedId === item.objectId ? 'bg-green-200 text-green-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                                              >
+                                                {copiedId === item.objectId ? 'Copied!' : 'Copy Object-Id'}
+                                              </button>
                                               <div className="flex items-center gap-2">
                                                 <span className="bg-green-100 text-green-600 text-xs font-bold px-3 py-1 rounded-full">
                                                   {item.count}times
