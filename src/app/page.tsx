@@ -358,10 +358,13 @@ export default function XMLDuplicateAnalyzer() {
                                       </div>
                                     ) : (
                                       pendingItems.map((item, index) => (
-                                        <Card key={item.objectId} className="border border-gray-200 hover:border-blue-300 transition-all duration-300 hover:shadow-lg">
-                                          <CardContent className="flex items-center gap-2 px-4 py-0 h-12">
-                                            <div className="flex items-center gap-3 mr-4 h-6">
-                                              <span className="flex items-center justify-center w-6 h-6 bg-blue-500 text-white text-sm font-bold rounded-full">
+                                        <Card
+                                          key={item.objectId}
+                                          className={`border border-gray-200 hover:border-blue-300 transition-all duration-300 hover:shadow-lg ${index === 0 ? 'scale-105 shadow-2xl border-blue-400 ring-2 ring-blue-200 z-10' : ''}`}
+                                        >
+                                          <CardContent className={`flex items-center gap-2 px-4 py-0 ${index === 0 ? 'h-20 text-lg' : 'h-12'}`}>
+                                            <div className={`flex items-center gap-3 mr-4 ${index === 0 ? 'h-8' : 'h-6'}`}>
+                                              <span className={`flex items-center justify-center bg-blue-500 text-white font-bold rounded-full ${index === 0 ? 'w-8 h-8 text-base' : 'w-6 h-6 text-sm'}`}> 
                                                 {index + 1}
                                               </span>
                                               <Checkbox
@@ -370,8 +373,8 @@ export default function XMLDuplicateAnalyzer() {
                                                 id={`pending-${item.objectId}`}
                                               />
                                             </div>
-                                            <div className="flex-1 flex items-center gap-3">
-                                              <span className="font-mono text-gray-900 font-medium">{item.objectId}</span>
+                                            <div className={`flex-1 flex items-center gap-3 ${index === 0 ? 'text-lg' : ''}`}>
+                                              <span className={`font-mono text-gray-900 font-medium ${index === 0 ? 'text-lg' : ''}`}>{item.objectId}</span>
                                               <button
                                                 onClick={() => handleCopy(item.objectId)}
                                                 className={`px-2 py-1 text-xs rounded transition ${copiedId === item.objectId ? 'bg-green-200 text-green-700' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
